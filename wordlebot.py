@@ -57,6 +57,18 @@ def translate_pattern(pattern): #'gwywg' etc
             ans = ans | (1 << (2*(4-i)))
     return ans
 
+def get_color_pattern(pattern):
+    result = ""
+    for i in [4,3,2,1,0]:
+        let_patt = pattern >> (2*i) & 3
+        if let_patt == 0:
+            result = result + "w"
+        elif let_patt == 1:
+            result = result + "y"
+        elif let_patt == 2:
+            result = result + "g"
+    return result
+
 def  print_pattern(pattern):
     for i in [4,3,2,1,0]:
         let_patt = pattern >> (2*i) & 3
@@ -86,6 +98,10 @@ def generate_database():
 def read_database():
     with open ('wordle_dbase.pickle', 'rb') as handle:
         return pickle.load(handle)
+
+def get_pattern_from_known_solution(guess, solution):
+    pattern = get_match_pattern(guess, solution)
+    return get_color_pattern(pattern)
 
 def GetRemainingWords(wordle_dbase, guess, pattern, possible_words):
     transpat = translate_pattern(pattern)
@@ -123,6 +139,7 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument("--hardmode", action="store_true", help="Not implemented yet")
     parser.add_argument("-f","--use_full_wordlist", action="store_true", help="Use the full wordlist rather than the wordle list (dordle appears to use this)")
     parser.add_argument("-s","--starting_word_entropies", action="store_true", help="Show first word entropies (takes a few seconds)")
+    parser.add_argument("-t","--target_mode", type=str, help="Show patterns based on target solution (use if you know the correct word)")
     return parser
 
 if __name__ == "__main__":
@@ -148,7 +165,12 @@ if __name__ == "__main__":
     while(True):
         guess = str(input('What word did you guess:>'))
         print('The entropy of this guess is ' + str(get_entropy(wordle_dbase, guess, possible_words))+ ' bits')
-        color_string = str(input('What color pattern do you get? i.e. yyggw? :>'))
+        if (args.target_mode):
+            color_string = get_pattern_from_known_solution(guess, args.target_mode)
+            print ("Auto color pattern for known solution: " + color_string)
+        else:
+            color_string = str(input('What color pattern do you get? i.e. yyggw? :>'))
+
         possible_words = GetRemainingWords(wordle_dbase, guess, color_string, possible_words)
         entropies = list(map(lambda word : get_entropy(wordle_dbase, word, possible_words), wordle_dbase))
         word_entropies = list(zip(entropies, wordle_dbase))
